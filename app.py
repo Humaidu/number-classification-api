@@ -1,37 +1,44 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
+import math
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS
 
 def is_prime(n):
-    """Check if a number is prime."""
-    if n < 2:
+    """Check if a number is prime.""" 
+    if n < 2 or n != int(n):  # Exclude numbers < 2 and non-integers
         return False
-    for i in range(2, int(n ** 0.5) + 1):
+    for i in range(2, int(math.sqrt(n)) + 1):
         if n % i == 0:
             return False
     return True
 
 def is_armstrong(n):
     """Check if a number is an Armstrong number."""
-    digits = [int(digit) for digit in str(n)]
+    if n != int(n):
+        return False  # Armstrong numbers only apply to integers
+    
+    digits = [int(digit) for digit in str(abs(int(n)))]
     return n == sum(d ** len(digits) for d in digits)
 
 def is_perfect(n):
-    """Check if a number is a perfect number."""
-    return n == sum(i for i in range(1, n) if n % i == 0)
+    """Check if a number is a perfect number (only for positive integers)."""
+    if n <= 0 or n != int(n):  # Exclude non-integers and negative numbers
+        return False
+    return n == sum(i for i in range(1, int(n)) if int(n) % i == 0)
 
 @app.route('/api/classify-number', methods=['GET'])
 def classify_number():
     """API endpoint to classify a number."""
     number = request.args.get("number")
-
-    if not number or not number.isdigit():
+    
+    try:
+        number = float(number)  # Allow floating-point values
+    except ValueError:
         return jsonify({"number": number, "error": True}), 400
 
-    number = int(number)
     properties = []
     
     if is_armstrong(number):
@@ -40,7 +47,7 @@ def classify_number():
     properties.append("odd" if number % 2 else "even")
 
     # Fetch fun fact from Numbers API
-    fun_fact_response = requests.get(f"http://numbersapi.com/{number}/math?json")
+    fun_fact_response = requests.get(f"http://numbersapi.com/{int(number)}/math?json")
     fun_fact = fun_fact_response.json().get("text", "No fun fact found.")
 
     return jsonify({
@@ -48,7 +55,7 @@ def classify_number():
         "is_prime": is_prime(number),
         "is_perfect": is_perfect(number),
         "properties": properties,
-        "digit_sum": sum(int(digit) for digit in str(number)),
+         "digit_sum": sum(int(digit) for digit in str(abs(int(number))) if digit.isdigit()),
         "fun_fact": fun_fact
     })
     
@@ -63,4 +70,4 @@ def classify_number():
     # }
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=3432)
